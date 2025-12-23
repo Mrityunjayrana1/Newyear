@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>2026 Mobile Magic</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: sans-serif;
+            touch-action: none; /* Disables scroll to improve touch experience */
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .hint {
+            position: absolute;
+            bottom: 50px;
+            width: 100%;
+            text-align: center;
+            color: #00ffcc;
+            font-size: 14px;
+            pointer-events: none;
+            animation: pulse 2s infinite;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            z-index: 10;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading" class="loading">LOADING MAGIC...</div>
+    <div class="hint">👆 Drag Finger to Explode Particles</div>
+    <div id="canvas-container"></div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+        import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+
+        // 1. Setup Scene
+        const scene = new THREE.Scene();
+        // Camera setup - positioned further back for mobile screens
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        
+        // Adjust camera distance based on screen width
+        if(window.innerWidth < 600) {
+            camera.position.z = 180; // Farther back for mobile
+        } else {
+            camera.position.z = 120; // Closer for laptop
+        }
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio); // Sharpness on mobile
+        document.body.appendChild(renderer.domElement);
+
+        // Variables
+        let particles;
+        const mouse = new THREE.Vector2(-100, -100); // Start mouse off-screen
+
+        // 2. Load Font & Create Particles
+        const loader = new FontLoader();
+        loader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json', function (font) {
+            
+            document.getElementById('loading').style.display = 'none';
+
+            const textGeo = new TextGeometry('2026', {
+                font: font,
+                size: 50,
+                height: 5,
+                curveSegments: 4, // Lower detail for better mobile performance
+                bevelEnabled: false
+            });
+
+            textGeo.center();
+
+            // Create Points
+            const positions = [];
+            const originalPositions = [];
+            const colors = [];
+            
+            // Use wireframe vertices
+            const posAttr = textGeo.attributes.position;
+            const count = posAttr.count;
+
+            // Density controller - skip points to reduce load on mobile
+            const step = window.innerWidth < 600 ? 1 : 1; 
+
+            for (let i = 0; i < count; i += step) {
+                const x = posAttr.getX(i);
+                const y = posAttr.getY(i);
+                const z = posAttr.getZ(i);
+
+                positions.push(x, y, z);
+                originalPositions.push(x, y, z);
+
+                // Neon Colors
+                const color = new THREE.Color();
+                color.setHSL((x / 100) + 0.5, 1.0, 0.5);
+                colors.push(color.r, color.g, color.b);
+            }
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('customColor', new THREE.Float32BufferAttribute(colors, 3));
+            geometry.userData = { originalPositions: originalPositions };
+
+            const material = new THREE.PointsMaterial({
+                size: 1.5, // Slightly bigger dots for mobile
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.9,
+            });
+
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+        });
+
+        // 3. Handle Touch & Mouse
+        function updateInput(x, y) {
+            // Normalize coordinates
+            mouse.x = (x / window.innerWidth) * 2 - 1;
+            mouse.y = -(y / window.innerHeight) * 2 + 1;
+        }
+
+        // Touch Events
+        document.addEventListener('touchmove', (e) => {
+            if(e.touches.length > 0) {
+                updateInput(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchstart', (e) => {
+            if(e.touches.length > 0) {
+                updateInput(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: false });
+
+        // Mouse Fallback
+        document.addEventListener('mousemove', (e) => {
+            updateInput(e.clientX, e.clientY);
+        });
+
+        // Clear interaction when finger lifted
+        document.addEventListener('touchend', () => {
+            mouse.x = -100; // Move force field away
+            mouse.y = -100;
+        });
+
+
+        // 4. Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (particles) {
+                const positions = particles.geometry.attributes.position.array;
+                const originals = particles.geometry.userData.originalPositions;
+                
+                // Map mouse to 3D space roughly
+                // Wider range for mobile touch
+                const mouseVec = new THREE.Vector3(mouse.x * 100, mouse.y * 100, 0); 
+
+                for (let i = 0; i < positions.length; i += 3) {
+                    const px = positions[i];
+                    const py = positions[i + 1];
+                    const pz = positions[i + 2];
+
+                    const ox = originals[i];
+                    const oy = originals[i + 1];
+                    const oz = originals[i + 2];
+
+                    const dx = mouseVec.x - ox;
+                    const dy = mouseVec.y - oy;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    // Interaction Radius
+                    const radius = 30; 
+
+                    if (dist < radius) {
+                        const force = (radius - dist) * 4; // Stronger push
+                        const angle = Math.atan2(dy, dx);
+                        
+                        positions[i] = ox - Math.cos(angle) * force;
+                        positions[i + 1] = oy - Math.sin(angle) * force;
+                    } else {
+                        // Return speed
+                        positions[i] += (ox - px) * 0.1;
+                        positions[i + 1] += (oy - py) * 0.1;
+                    }
+                }
+                particles.geometry.attributes.position.needsUpdate = true;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Resize Fix
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+</html>
