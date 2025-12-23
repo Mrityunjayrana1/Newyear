@@ -1,2 +1,2 @@
-#newyear
-mrityunjay Rana 
+# Newyears
+My first GitHub repository
