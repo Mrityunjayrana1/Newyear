@@ -3,240 +3,199 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>2026 Mobile Magic</title>
+    <title>2026 Happy New Year</title>
     <style>
+        /* CSS Styling */
         body {
             margin: 0;
-            overflow: hidden;
-            background-color: #000;
-            font-family: sans-serif;
-            touch-action: none; /* Disables scroll to improve touch experience */
+            padding: 0;
+            background: #000;
+            overflow: hidden; /* Scroll band */
+            font-family: 'Arial', sans-serif;
         }
 
-        #canvas-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-
-        .hint {
-            position: absolute;
-            bottom: 50px;
-            width: 100%;
-            text-align: center;
-            color: #00ffcc;
-            font-size: 14px;
-            pointer-events: none;
-            animation: pulse 2s infinite;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            z-index: 10;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
-        }
-        
-        .loading {
+        /* 2026 Text Styling */
+        .center-text {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             color: white;
-            font-size: 16px;
+            text-align: center;
+            pointer-events: none; /* Text ke aar-paar click hoga */
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 15vw; /* Screen ke hisab se size */
+            margin: 0;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            background: -webkit-linear-gradient(#eee, #333);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            font-size: 5vw;
+            color: #00ffcc;
+            letter-spacing: 5px;
+            margin-top: -10px;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px #00ffcc;
+        }
+
+        /* Canvas for Animation */
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .hint {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 12px;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-    <div id="loading" class="loading">LOADING MAGIC...</div>
-    <div class="hint">👆 Drag Finger to Explode Particles</div>
-    <div id="canvas-container"></div>
+    <div class="center-text">
+        <h1>2026</h1>
+        <p>Happy New Year</p>
+    </div>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
+    <div class="hint">TOUCH ANYWHERE ON SCREEN</div>
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { FontLoader } from 'three/addons/loaders/FontLoader.js';
-        import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+    <canvas id="canvas"></canvas>
 
-        // 1. Setup Scene
-        const scene = new THREE.Scene();
-        // Camera setup - positioned further back for mobile screens
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    <script>
+        /**
+         * PURE JAVASCRIPT PARTICLE SYSTEM
+         * No External Libraries | Works Offline
+         */
         
-        // Adjust camera distance based on screen width
-        if(window.innerWidth < 600) {
-            camera.position.z = 180; // Farther back for mobile
-        } else {
-            camera.position.z = 120; // Closer for laptop
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width, height;
+        let particles = [];
+        
+        // Colors for particles (Gold, Cyan, Pink, White)
+        const colors = ['#FFD700', '#00FFFF', '#FF00FF', '#FFFFFF', '#00FF00'];
+
+        // Resize Canvas function
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Particle Class
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                // Random size
+                this.size = Math.random() * 5 + 1; 
+                // Random speed and direction
+                this.speedX = Math.random() * 6 - 3; 
+                this.speedY = Math.random() * 6 - 3;
+                // Random color
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                // Life of particle (opacity)
+                this.life = 100; 
+            }
+
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.life -= 2; // Decrease life
+                if(this.size > 0.2) this.size -= 0.1; // Shrink
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.life / 100; // Fade out
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1; // Reset opacity
+            }
         }
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio); // Sharpness on mobile
-        document.body.appendChild(renderer.domElement);
-
-        // Variables
-        let particles;
-        const mouse = new THREE.Vector2(-100, -100); // Start mouse off-screen
-
-        // 2. Load Font & Create Particles
-        const loader = new FontLoader();
-        loader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json', function (font) {
-            
-            document.getElementById('loading').style.display = 'none';
-
-            const textGeo = new TextGeometry('2026', {
-                font: font,
-                size: 50,
-                height: 5,
-                curveSegments: 4, // Lower detail for better mobile performance
-                bevelEnabled: false
-            });
-
-            textGeo.center();
-
-            // Create Points
-            const positions = [];
-            const originalPositions = [];
-            const colors = [];
-            
-            // Use wireframe vertices
-            const posAttr = textGeo.attributes.position;
-            const count = posAttr.count;
-
-            // Density controller - skip points to reduce load on mobile
-            const step = window.innerWidth < 600 ? 1 : 1; 
-
-            for (let i = 0; i < count; i += step) {
-                const x = posAttr.getX(i);
-                const y = posAttr.getY(i);
-                const z = posAttr.getZ(i);
-
-                positions.push(x, y, z);
-                originalPositions.push(x, y, z);
-
-                // Neon Colors
-                const color = new THREE.Color();
-                color.setHSL((x / 100) + 0.5, 1.0, 0.5);
-                colors.push(color.r, color.g, color.b);
-            }
-
-            const geometry = new THREE.BufferGeometry();
-            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-            geometry.setAttribute('customColor', new THREE.Float32BufferAttribute(colors, 3));
-            geometry.userData = { originalPositions: originalPositions };
-
-            const material = new THREE.PointsMaterial({
-                size: 1.5, // Slightly bigger dots for mobile
-                vertexColors: true,
-                transparent: true,
-                opacity: 0.9,
-            });
-
-            particles = new THREE.Points(geometry, material);
-            scene.add(particles);
-        });
-
-        // 3. Handle Touch & Mouse
-        function updateInput(x, y) {
-            // Normalize coordinates
-            mouse.x = (x / window.innerWidth) * 2 - 1;
-            mouse.y = -(y / window.innerHeight) * 2 + 1;
-        }
-
-        // Touch Events
-        document.addEventListener('touchmove', (e) => {
-            if(e.touches.length > 0) {
-                updateInput(e.touches[0].clientX, e.touches[0].clientY);
-            }
-        }, { passive: false });
-
-        document.addEventListener('touchstart', (e) => {
-            if(e.touches.length > 0) {
-                updateInput(e.touches[0].clientX, e.touches[0].clientY);
-            }
-        }, { passive: false });
-
-        // Mouse Fallback
-        document.addEventListener('mousemove', (e) => {
-            updateInput(e.clientX, e.clientY);
-        });
-
-        // Clear interaction when finger lifted
-        document.addEventListener('touchend', () => {
-            mouse.x = -100; // Move force field away
-            mouse.y = -100;
-        });
-
-
-        // 4. Animation Loop
+        // Animation Loop
         function animate() {
-            requestAnimationFrame(animate);
+            // Leave a trail effect (instead of clearing completely)
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; 
+            ctx.fillRect(0, 0, width, height);
 
-            if (particles) {
-                const positions = particles.geometry.attributes.position.array;
-                const originals = particles.geometry.userData.originalPositions;
-                
-                // Map mouse to 3D space roughly
-                // Wider range for mobile touch
-                const mouseVec = new THREE.Vector3(mouse.x * 100, mouse.y * 100, 0); 
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
 
-                for (let i = 0; i < positions.length; i += 3) {
-                    const px = positions[i];
-                    const py = positions[i + 1];
-                    const pz = positions[i + 2];
-
-                    const ox = originals[i];
-                    const oy = originals[i + 1];
-                    const oz = originals[i + 2];
-
-                    const dx = mouseVec.x - ox;
-                    const dy = mouseVec.y - oy;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-
-                    // Interaction Radius
-                    const radius = 30; 
-
-                    if (dist < radius) {
-                        const force = (radius - dist) * 4; // Stronger push
-                        const angle = Math.atan2(dy, dx);
-                        
-                        positions[i] = ox - Math.cos(angle) * force;
-                        positions[i + 1] = oy - Math.sin(angle) * force;
-                    } else {
-                        // Return speed
-                        positions[i] += (ox - px) * 0.1;
-                        positions[i + 1] += (oy - py) * 0.1;
-                    }
+                // Remove dead particles
+                if (particles[i].life <= 0) {
+                    particles.splice(i, 1);
+                    i--;
                 }
-                particles.geometry.attributes.position.needsUpdate = true;
             }
-
-            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
         }
 
         animate();
 
-        // Resize Fix
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+        // --- INTERACTION LOGIC ---
+
+        function createExplosion(x, y) {
+            // Create 10 particles at once
+            for (let i = 0; i < 5; i++) {
+                particles.push(new Particle(x, y));
+            }
+        }
+
+        // Mouse Move
+        document.addEventListener('mousemove', (e) => {
+            createExplosion(e.clientX, e.clientY);
         });
+
+        // Touch Move (For Mobile)
+        document.addEventListener('touchmove', (e) => {
+            // Prevent scrolling
+            e.preventDefault(); 
+            for (let i = 0; i < e.touches.length; i++) {
+                createExplosion(e.touches[i].clientX, e.touches[i].clientY);
+            }
+        }, { passive: false });
+
+        // Touch Start (Tap)
+        document.addEventListener('touchstart', (e) => {
+             e.preventDefault();
+             for (let i = 0; i < e.touches.length; i++) {
+                // More particles on tap
+                for(let j=0; j<20; j++) {
+                    particles.push(new Particle(e.touches[i].clientX, e.touches[i].clientY));
+                }
+            }
+        }, { passive: false });
+        
+        // Auto-fireworks randomly to keep it alive
+        setInterval(() => {
+            const x = Math.random() * width;
+            const y = Math.random() * height;
+            for(let j=0; j<5; j++) {
+                particles.push(new Particle(x, y));
+            }
+        }, 500);
 
     </script>
 </body>
 </html>
+
+
