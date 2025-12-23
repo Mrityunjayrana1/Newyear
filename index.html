@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy New Year 2026 - Mrityunjay</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Montserrat', sans-serif;
+        }
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* --- START BUTTON OVERLAY --- */
+        #start-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: black;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        #start-btn {
+            padding: 20px 40px;
+            border: 2px solid #00FFFF;
+            color: #00FFFF;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            background: transparent;
+            border-radius: 50px;
+            box-shadow: 0 0 20px #00FFFF;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 20px #00FFFF; }
+            50% { transform: scale(1.1); box-shadow: 0 0 40px #00FFFF; }
+            100% { transform: scale(1); box-shadow: 0 0 20px #00FFFF; }
+        }
+
+        /* --- TEXT OVERLAYS --- */
+        .overlay-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .hidden-text {
+            opacity: 0;
+            transition: opacity 3s ease-in-out;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        #hny-text {
+            margin-top: 150px;
+            color: #fff;
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: 8px;
+            text-shadow: 0 0 10px #ff00de, 0 0 20px #ff00de, 0 0 40px #ff00de;
+            animation: glow-anim 2s infinite alternate;
+        }
+
+        @keyframes glow-anim {
+            from { text-shadow: 0 0 10px #ff00de, 0 0 20px #ff00de; }
+            to { text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff; }
+        }
+
+        #signature-text {
+            position: absolute;
+            bottom: 30px;
+            color: #FFD700;
+            font-size: 1.2rem;
+            letter-spacing: 3px;
+            font-weight: 400;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+        }
+
+        .visible { opacity: 1 !important; }
+
+        @media (max-width: 768px) {
+            #hny-text { font-size: 1.5rem; letter-spacing: 4px; margin-top: 80px; }
+            #signature-text { font-size: 0.9rem; letter-spacing: 2px; bottom: 20px; }
+            #start-btn { font-size: 1rem; padding: 15px 30px; }
+        }
+    </style>
+</head>
+<body>
+    
+    <div id="start-overlay">
+        <div id="start-btn">Tap to Start Party 🎵</div>
+    </div>
+
+    <audio id="bgMusic" loop>
+        <source src="song.mp3" type="audio/mpeg">
+        </audio>
+
+    <canvas id="canvas1"></canvas>
+
+    <div class="overlay-container">
+        <h1 id="hny-text" class="hidden-text">HAPPY NEW YEAR</h1>
+        <div id="signature-text" class="hidden-text">Mrityunjay ke taraf se</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas1');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let particlesArray = [];
+        let animationStage = 'WAITING';
+        
+        const text1 = "2025";
+        const text2 = "2026";
+        const particleSize = 3;
+        const scanStep = window.innerWidth < 600 ? 5 : 3; 
+        const explodeForce = 30;
+        const morphSpeed = 0.04;
+        let fontSize = window.innerWidth < 600 ? 80 : 180;
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.targetX = x;
+                this.targetY = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.size = particleSize;
+                const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff', '#ff00ff', '#ffffff'];
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.rect(this.x, this.y, this.size, this.size);
+                ctx.fill();
+            }
+            update() {
+                if (animationStage === 'EXPLODING') {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.vx *= 0.98; 
+                    this.vy *= 0.98;
+                } else if (animationStage === 'MORPHING') {
+                    let dx = this.targetX - this.x;
+                    let dy = this.targetY - this.y;
+                    this.x += dx * morphSpeed;
+                    this.y += dy * morphSpeed;
+                }
+            }
+            explode() {
+                this.vx = (Math.random() - 0.5) * explodeForce;
+                this.vy = (Math.random() - 0.5) * explodeForce;
+            }
+        }
+
+        function getTextCoordinates(text) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.font = '900 ' + fontSize + 'px "Montserrat", Arial, sans-serif';
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, canvas.width / 2, canvas.height / 2 - 30);
+            const textData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const coordinates = [];
+            for (let y = 0; y < textData.height; y += scanStep) {
+                for (let x = 0; x < textData.width; x += scanStep) {
+                    if (textData.data[(y * 4 * textData.width) + (x * 4) + 3] > 128) {
+                        coordinates.push({ x: x, y: y });
+                    }
+                }
+            }
+            return coordinates;
+        }
+
+        function init() {
+            particlesArray = [];
+            const coords1 = getTextCoordinates(text1);
+            const coords2 = getTextCoordinates(text2);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let maxCount = Math.max(coords1.length, coords2.length);
+            for (let i = 0; i < maxCount; i++) {
+                let start = coords1[i % coords1.length];
+                let end = coords2[i % coords2.length];
+                let p = new Particle(start.x, start.y);
+                p.targetX = end.x;
+                p.targetY = end.y;
+                particlesArray.push(p);
+            }
+        }
+
+        function animate() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < particlesArray.length; i++) {
+                particlesArray[i].draw();
+                particlesArray[i].update();
+            }
+            requestAnimationFrame(animate);
+        }
+
+        // --- MUSIC & START LOGIC ---
+        
+        const startOverlay = document.getElementById('start-overlay');
+        const audio = document.getElementById('bgMusic');
+
+        // Initial setup
+        init();
+        // Don't start animation loop yet, wait for click
+        // Draw first frame so screen isn't empty behind button
+        animate(); 
+
+        startOverlay.addEventListener('click', () => {
+            // 1. Play Music
+            audio.play().catch(e => console.log("Audio play failed: ", e));
+            
+            // 2. Hide Button
+            startOverlay.style.display = 'none';
+
+            // 3. Start Animation Sequence
+            setTimeout(() => {
+                animationStage = 'EXPLODING';
+                particlesArray.forEach(p => p.explode());
+            }, 3000);
+
+            setTimeout(() => {
+                animationStage = 'MORPHING';
+            }, 4500);
+
+            setTimeout(() => {
+                document.getElementById('hny-text').classList.add('visible');
+                document.getElementById('signature-text').classList.add('visible');
+            }, 7500);
+        });
+
+        window.addEventListener('resize', function() {
+             location.reload(); 
+        });
+
+    </script>
+</body>
+</html>
